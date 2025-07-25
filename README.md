@@ -29,30 +29,25 @@ generate_msa("example.fasta", "output_dir", token="your-x-token")
 
 ## Installation
 
-### Option 1: Local Development Install
-
 ```bash
-git clone https://github.com/YOUR-LAB/biie_msa_server.git
-cd biie_msa_server
-pip install -e .
+pip install git+https://github.com/renwicks2000/biie_msa_server.git
 ```
 
-### Option 2: pip Install (once published to PyPI)
-```bash
-pip install biie_msa_server
-```
-
-> You will still need to provide your personal x-token manually.
+> You will still need to provide the x-token manually, as shown in usage.
 
 ---
 
 ## Usage
 
 ```python
-from biie_msa_server import generate_msa
+from biie_msa_server import generate_msa, set_token
 
-generate_msa("your_input.fasta", "results_dir", token="your-x-token")
+set_token("password")  # to get the password to access the server, please contact sean.renwick@immune.engineering
+
+generate_msa("example.fasta", "output_dir", token="your-x-token")
 ```
+
+This will generate an AF3-compatible .json and an MSA .a3m for each protein chain in the fasta, as well as a zip folder of all files in the output_dir.
 
 ### Arguments
 
@@ -73,6 +68,8 @@ generate_msa("your_input.fasta", "results_dir", token="your-x-token")
 
 ## Notes
 
+- Please make sure the "cpuonlyvm" on Azure is running. This is the host of the server. Upon startup, all necessary services should automatically be triggered, making it possible to generate MSAs.
+- The first few MSAs may take longer to generate as the GPU needs to be primed with the database indices before running.
 - If the remote gpuserver processes are **not running**, the client will attempt to start them automatically.
 - If the FastAPI server is unreachable, you’ll get a clear error message.
 - All output `.a3m` and `.json` files will be extracted from the zip.
