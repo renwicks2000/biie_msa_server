@@ -5,7 +5,9 @@ A simple Python client for submitting MSA jobs to the BIIE ColabFold server.
 This tool lets you run remote ColabFold MSA generation by simply calling:
 
 ```python
-from biie_msa_server import generate_msa
+from biie_msa_server import generate_msa, set_token
+
+set_token("password")  # to get the password to access the server, please contact sean.renwick@immune.engineering
 
 generate_msa("example.fasta", "output_dir", token="your-x-token")
 ```
