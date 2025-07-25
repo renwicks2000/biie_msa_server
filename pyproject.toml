@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "biie_msa_server"
+version = "0.1.0"
+description = "Python client for submitting MSA jobs to the BIIE ColabFold server"
+authors = ["Your Name <your.email@domain.com>"]
+license = "MIT"
+readme = "README.md"
+packages = [{ include = "biie_msa_server" }]
+
+[tool.poetry.dependencies]
+python = ">=3.8"
+requests = "^2.31.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
