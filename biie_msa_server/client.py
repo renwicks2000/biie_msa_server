@@ -21,7 +21,8 @@ def check_and_start_gpuservers():
     
     server_status = status_resp.json()["details"]
     if not all(server_status.values()):
-        print("Warning: gpuservers not running, starting now...")
+        print("[WARN] gpuservers not running, starting now...")
+        print("[INFO] Please note that after starting the server, the first run is typically very slow (~1hr)!")
         start_resp = requests.get(f"{SERVER_URL}/start-gpuservers", headers=headers)
         start_resp.raise_for_status()
         time.sleep(30)
@@ -58,8 +59,6 @@ def generate_msa(input_fasta: str, output_dir: str):
     while True:
         status_resp = requests.get(f"{SERVER_URL}/task-status/{task_id}", headers=headers)
         status_data = status_resp.json()
-
-        print(f"status ={status_data['status']}")
 
         if status_data["status"] == "complete":
             job_id = status_data["job_id"]

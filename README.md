@@ -9,7 +9,7 @@ from biie_msa_server import generate_msa, set_token
 
 set_token("password")  # to get the password to access the server, please contact sean.renwick@immune.engineering
 
-generate_msa("example.fasta", "output_dir", token="your-x-token")
+generate_msa("example.fasta", "output_dir")
 ```
 
 ## How It Works
@@ -72,7 +72,7 @@ This will generate an AF3-compatible .json and an MSA .a3m for each protein chai
 - The first few MSAs may take longer to generate as the GPU needs to be primed with the database indices before running.
 - If the remote gpuserver processes are **not running**, the client will attempt to start them automatically.
 - If the FastAPI server is unreachable, you’ll get a clear error message.
-- All output `.a3m` and `.json` files will be extracted from the zip.
+- All output `.a3m` and `.json` files will be extracted from the zip into the output_dir.
 
 ---
 
