@@ -24,7 +24,13 @@ def check_and_start_gpuservers():
         print("Warning: gpuservers not running, starting now...")
         start_resp = requests.get(f"{SERVER_URL}/start-gpuservers", headers=headers)
         start_resp.raise_for_status()
-        time.sleep(10)
+        time.sleep(30)
+
+        # Recheck
+        status_resp = requests.get(f"{SERVER_URL}/gpuserver-status", headers=headers)
+        server_status = status_resp.json()["details"]
+        if not all(server_status.values()):
+            raise RuntimeError(f"gpuserver failed to start: {server_status}")
 
 
 def generate_msa(input_fasta: str, output_dir: str):
@@ -53,9 +59,13 @@ def generate_msa(input_fasta: str, output_dir: str):
         status_resp = requests.get(f"{SERVER_URL}/task-status/{task_id}", headers=headers)
         status_data = status_resp.json()
 
+        print(f"status ={status_data['status']}")
+
         if status_data["status"] == "complete":
             job_id = status_data["job_id"]
             break
+        elif status_data["status"] == "failed":
+            raise RuntimeError(f"MSA generation failed: {status_data.get('error', 'Unknown error')}")
 
         time.sleep(10)
 

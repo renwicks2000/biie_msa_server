@@ -44,10 +44,10 @@ from biie_msa_server import generate_msa, set_token
 
 set_token("password")  # to get the password to access the server, please contact sean.renwick@immune.engineering
 
-generate_msa("example.fasta", "output_dir", token="your-x-token")
+generate_msa("example.fasta", "output_dir")
 ```
 
-This will generate an AF3-compatible .json and an MSA .a3m for each protein chain in the fasta, as well as a zip folder of all files in the output_dir.
+This will generate an AF3-compatible .json and an MSA .a3m for each protein chain in the fasta, as well as a zip folder of all files in the output_dir. To use the generate_msa() function, you only need to set the password once.
 
 ### Arguments
 
