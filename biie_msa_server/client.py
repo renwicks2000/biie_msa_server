@@ -53,7 +53,7 @@ def generate_msa(input_fasta: str, output_dir: str):
         raise RuntimeError(f"Submission failed: {resp.text}")
     
     task_id = resp.json()["task_id"]
-    print(f"Job submitted. Task ID: {task_id}. Polling for result...")
+    print(f"Job submitted for {input_fasta.name}. Task ID: {task_id}. Polling for result...")
 
     # Poll task status
     while True:
