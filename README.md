@@ -95,3 +95,17 @@ This architecture allows for:
 - Automatic recovery and service availability after VM reboot
 
 For more information or to contribute, please contact the maintainer.
+
+---
+## Troubleshooting
+There are some known errors with the server, and some haven't been fixed yet. Here are some temporary fixes in the meantime.
+
+### gpuserver failed to start
+This is likely because the VM failed to automatically mount the database to /mnt/databases. To fix, please run this on the VM running the server:
+```bash
+sudo mkdir /data/databases
+sudo mount -a
+```
+
+### Zero error
+After ~40 MSA generations, the server begins to fail on all MSA generations. This is likely due to a cache issue, or an issue with how jobs are stored in the queue that isn't getting cleaned up properly.
