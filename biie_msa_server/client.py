@@ -76,7 +76,6 @@ def generate_msa(input_fasta: str, output_dir: str):
 
     input_fasta = Path(input_fasta)
     output_dir = Path(output_dir)
-    output_zip = output_dir / f"{job_id}.zip"
     output_folder = output_dir / f"{input_fasta.stem}"
 
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -114,6 +113,7 @@ def generate_msa(input_fasta: str, output_dir: str):
 
     # Download zip
     download_url = f"{SERVER_URL}/download/{job_id}"
+    output_zip = output_dir / f"{job_id}.zip"
     
     with requests.get(download_url, headers=headers, stream=True) as r:
         r.raise_for_status()
