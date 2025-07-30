@@ -25,6 +25,9 @@ generate_msa("example.fasta", "output_dir")
 
 5. **Download & Unzip**: Once complete, the client downloads the result `.zip` file and unpacks it into your specified `output_dir`.
 
+6. **Redundancy Handling**: If an `.a3m` or `.json` file already exists in the expected output directory, the job is skipped to avoid recomputation.
+
+
 ---
 
 ## Installation
@@ -41,13 +44,22 @@ pip install git+https://github.com/renwicks2000/biie_msa_server.git
 
 ```python
 from biie_msa_server import generate_msa, set_token
+from dotenv import load_dotenv
 
-set_token("password")  # to get the password to access the server, please contact sean.renwick@immune.engineering
+load_dotenv()
+set_token(os.getenv("MSA_SERVER_PW")) # to get the password to access the server, please contact sean.renwick@immune.engineering
 
 generate_msa("example.fasta", "output_dir")
 ```
 
-This will generate an AF3-compatible .json and an MSA .a3m for each protein chain in the fasta, as well as a zip folder of all files in the output_dir. To use the generate_msa() function, you only need to set the password once.
+This will generate an AF3-compatible .json and an MSA .a3m for each protein chain in the FASTA file, as well as a zip folder of all files in the output_dir.
+
+As shown above, we suggest saving the password in a local .env file in the root folder that isn't pushed to git to preserve security. Format your local .env like this:
+
+```bash
+MSA_SERVER_PW=Password
+```
+and make sure the .env file is in your .gitignore.
 
 ### Arguments
 
@@ -55,7 +67,6 @@ This will generate an AF3-compatible .json and an MSA .a3m for each protein chai
 |---------------|-------------|---------------------------------------|
 | input_fasta   | str or Path | Path to your FASTA input file         |
 | output_dir    | str or Path | Directory to store the MSA result     |
-| token         | str         | Your personal x-token for the server  |
 
 ---
 
@@ -68,44 +79,55 @@ This will generate an AF3-compatible .json and an MSA .a3m for each protein chai
 
 ## Notes
 
-- Please make sure the "cpuonlyvm" on Azure is running. This is the host of the server. Upon startup, all necessary services should automatically be triggered, making it possible to generate MSAs.
-- The first few MSAs may take longer to generate as the GPU needs to be primed with the database indices before running.
-- If the remote gpuserver processes are **not running**, the client will attempt to start them automatically.
-- If the FastAPI server is unreachable, you’ll get a clear error message.
-- All output `.a3m` and `.json` files will be extracted from the zip into the output_dir.
+- Please make sure the Azure VM ("cpuonlyvm") hosting the server is running.
+- On startup, the VM should automatically start:
+  - Redis
+  - Celery worker
+  - FastAPI (Uvicorn)
+- The first few MSAs may take longer to generate due to GPU warm-up and database caching.
+- If the `gpuserver` processes are **not running**, the client will attempt to restart them automatically.
+- If generation fails, the client retries once after restarting the gpuservers before failing.
 
 ---
 
 ## Server Stack Overview
 
-On the server side, this client talks to a stack that includes:
+This client talks to a server running:
 
-- **FastAPI** (REST API)
-- **Celery** (task queue)
-- **Redis** (Celery broker and backend)
-- **ColabFold** (local execution)
-- **Systemd services** ensure:
-  - Redis starts on boot
-  - Celery worker starts on boot
-  - FastAPI (via Uvicorn) starts on boot
+- **FastAPI** (REST interface)
+- **Celery** (task queue for job handling)
+- **Redis** (Celery broker/backend)
+- **ColabFold** (run on GPU with AF3-compatible flags)
+- **Systemd** services on the VM for Redis, Celery, and Uvicorn
 
-This architecture allows for:
-- Concurrent job handling
-- Stable server load
-- Automatic recovery and service availability after VM reboot
+This setup enables:
 
-For more information or to contribute, please contact the maintainer.
+- Multi-user safe submissions
+- Centralized GPU resource management
+- Recovery from GPU stalls or stale processes
 
 ---
+
 ## Troubleshooting
-There are some known errors with the server, and some haven't been fixed yet. Here are some temporary fixes in the meantime.
 
 ### gpuserver failed to start
-This is likely because the VM failed to automatically mount the database to /mnt/databases. To fix, please run this on the VM running the server:
+
+This usually happens if the VM failed to mount the database directory on boot. This should ideally be done automatically, but may fail.
+
+Fix with:
+
 ```bash
 sudo mkdir /data/databases
 sudo mount -a
 ```
 
-### Zero error
-After ~40 MSA generations, the server begins to fail on all MSA generations. This is likely due to a cache issue, or an issue with how jobs are stored in the queue that isn't getting cleaned up properly.
+### "Zero error" or silent MSA failures
+
+After ~60 jobs, the GPU cache or gpuserver state may corrupt.
+
+The client already automatically restarts the gpuservers on failure to circumvent this failure. If this doesn't work, you may need to completely restart the Azure VM.
+
+---
+
+## Feedback
+For server access or bug reports, please contact [Sean Renwick](mailto:sean.renwick@immune.engineeering)

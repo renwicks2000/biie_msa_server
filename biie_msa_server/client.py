@@ -80,8 +80,14 @@ def generate_msa(input_fasta: str, output_dir: str):
 
     output_dir.mkdir(parents=True, exist_ok=True)
     output_folder.mkdir(parents=True, exist_ok=True)
+
+    existing_files = list(output_folder.glob("*.a3m")) + list(output_folder.glob("*.json"))
+    if existing_files:
+        print(f"[SKIP] MSA already exists for {input_fasta.name}. Skipping generation.")
+        return
     
     headers = {"x-token": TOKEN}
+    start_time = time.time()
     task_id = submit_job(input_fasta)
     print(f"Job submitted for {input_fasta.name}. Task ID: {task_id}. Polling for result...")
 
@@ -108,8 +114,9 @@ def generate_msa(input_fasta: str, output_dir: str):
                 raise RuntimeError(f"[ERROR] MSA generation failed permanently: {status_data.get('error', 'Unknown error')}")
 
         time.sleep(10)
-
-    print(f"Job complete. Downloading result for Job ID: {job_id}")
+    end_time = time.time()
+    minutes, seconds = divmod(int(end_time-start_time), 60)
+    print(f"Job complete. MSA took {minutes}m {seconds}s.\nDownloading result for Job ID: {job_id}")
 
     # Download zip
     download_url = f"{SERVER_URL}/download/{job_id}"
@@ -128,4 +135,4 @@ def generate_msa(input_fasta: str, output_dir: str):
         output_zip.unlink()
         print(f"Unzipped contents to: {output_folder}")
 
-    return
+    return output_folder
