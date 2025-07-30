@@ -84,7 +84,7 @@ def generate_msa(input_fasta: str, output_dir: str):
     existing_files = list(output_folder.glob("*.a3m")) + list(output_folder.glob("*.json"))
     if existing_files:
         print(f"[SKIP] MSA already exists for {input_fasta.name}. Skipping generation.")
-        return
+        return output_folder
     
     headers = {"x-token": TOKEN}
     start_time = time.time()
