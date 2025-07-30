@@ -34,6 +34,40 @@ def check_and_start_gpuservers():
             raise RuntimeError(f"gpuserver failed to start: {server_status}")
 
 
+def restart_gpuservers():
+    headers = {"x-token": TOKEN}
+    print("[INFO] Terminating stale gpuserver processes...")
+    requests.post(f"{SERVER_URL}/terminate-gpuservers", headers=headers)
+
+    # Wait until all are gone
+    timeout = 120
+    start_time = time.time()
+    while True:
+        status_resp = requests.get(f"{SERVER_URL}/gpuserver-status", headers=headers)
+        server_status = status_resp.json()["details"]
+        if not any(server_status.values()):
+            break
+        if time.time() - start_time > timeout:
+            raise RuntimeError("Timeout: gpuserver processes did not fully terminate.")
+        time.sleep(5)
+
+    print("[INFO] Restarting gpuserver processes...")
+    resp = requests.get(f"{SERVER_URL}/start-gpuservers", headers=headers)
+    resp.raise_for_status()
+    print("[INFO] gpuserver processes restarted. Waiting briefly...")
+    time.sleep(30)
+
+
+def submit_job(input_fasta: Path):
+    headers = {"x-token": TOKEN}
+    with input_fasta.open("rb") as f:
+        files = {'file': (input_fasta.name, f)}
+        resp = requests.post(f"{SERVER_URL}/submit", files=files, headers=headers)
+    if resp.status_code != 200:
+        raise RuntimeError(f"Submission failed: {resp.text}")
+    return resp.json()["task_id"]
+
+
 def generate_msa(input_fasta: str, output_dir: str):
     if TOKEN is None:
         raise ValueError("No token is set. Call set_token(TOKEN) before generate_msa().")
@@ -42,18 +76,17 @@ def generate_msa(input_fasta: str, output_dir: str):
 
     input_fasta = Path(input_fasta)
     output_dir = Path(output_dir)
+    output_zip = output_dir / f"{job_id}.zip"
+    output_folder = output_dir / f"{input_fasta.stem}"
+
     output_dir.mkdir(parents=True, exist_ok=True)
-
-    with input_fasta.open("rb") as f:
-        files = {'file': (input_fasta.name, f)}
-        headers = {"x-token": TOKEN}
-        resp = requests.post(f"{SERVER_URL}/submit", files=files, headers=headers)
-
-    if resp.status_code != 200:
-        raise RuntimeError(f"Submission failed: {resp.text}")
+    output_folder.mkdir(parents=True, exist_ok=True)
     
-    task_id = resp.json()["task_id"]
+    headers = {"x-token": TOKEN}
+    task_id = submit_job(input_fasta)
     print(f"Job submitted for {input_fasta.name}. Task ID: {task_id}. Polling for result...")
+
+    retried = False
 
     # Poll task status
     while True:
@@ -64,7 +97,16 @@ def generate_msa(input_fasta: str, output_dir: str):
             job_id = status_data["job_id"]
             break
         elif status_data["status"] == "failed":
-            raise RuntimeError(f"MSA generation failed: {status_data.get('error', 'Unknown error')}")
+            if not retried:
+                print("[WARN] MSA generation failed. Attempting one restart of gpuserver and resubmission...")
+                restart_gpuservers()
+                print("[INFO] gpuservers have been restarted. Please note that the gpus require some time to warm up and the first MSA run will be slow.")
+                task_id = submit_job(input_fasta)
+                retried = True
+                print(f"[INFO] Job resubmitted. New Task ID: {task_id}")
+                continue
+            else:
+                raise RuntimeError(f"[ERROR] MSA generation failed permanently: {status_data.get('error', 'Unknown error')}")
 
         time.sleep(10)
 
@@ -72,7 +114,7 @@ def generate_msa(input_fasta: str, output_dir: str):
 
     # Download zip
     download_url = f"{SERVER_URL}/download/{job_id}"
-    output_zip = output_dir / f"{job_id}.zip"
+    
     with requests.get(download_url, headers=headers, stream=True) as r:
         r.raise_for_status()
         with open(output_zip, "wb") as f:
@@ -82,7 +124,8 @@ def generate_msa(input_fasta: str, output_dir: str):
     print(f"Downloaded: {output_zip}")
 
     with zipfile.ZipFile(output_zip, 'r') as zip_ref:
-        zip_ref.extractall(output_dir)
-        print(f"Unzipped contents to: {output_dir}")
+        zip_ref.extractall(output_folder)
+        output_zip.unlink()
+        print(f"Unzipped contents to: {output_folder}")
 
     return
