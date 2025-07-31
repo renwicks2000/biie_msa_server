@@ -23,6 +23,7 @@ def check_and_start_gpuservers():
     if not all(server_status.values()):
         print("[WARN] gpuservers not running, starting now...")
         print("[INFO] Please note that after starting the server, the first run is typically very slow (~1hr)!")
+        print("[INFO] Subsequent submissions typically take 3-4 minutes.")
         start_resp = requests.get(f"{SERVER_URL}/start-gpuservers", headers=headers)
         start_resp.raise_for_status()
         time.sleep(30)
@@ -89,7 +90,7 @@ def generate_msa(input_fasta: str, output_dir: str):
     headers = {"x-token": TOKEN}
     start_time = time.time()
     task_id = submit_job(input_fasta)
-    print(f"Job submitted for {input_fasta.name}. Task ID: {task_id}. Polling for result...")
+    print(f"Job submitted for {input_fasta.name}. Task ID: {task_id}. Waiting for result...")
 
     retried = False
 
