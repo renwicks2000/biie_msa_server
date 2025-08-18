@@ -69,12 +69,10 @@ def submit_job(input_fasta: Path):
     return resp.json()["task_id"]
 
 
-def generate_msa(input_fasta: str, output_dir: str):
+def generate_msa(input_fasta: str, output_dir: str, verbose):
     if TOKEN is None:
         raise ValueError("No token is set. Call set_token(TOKEN) before generate_msa().")
     
-    check_and_start_gpuservers()
-
     input_fasta = Path(input_fasta)
     output_dir = Path(output_dir)
     output_folder = output_dir / f"{input_fasta.stem}"
@@ -84,8 +82,11 @@ def generate_msa(input_fasta: str, output_dir: str):
 
     existing_files = list(output_folder.glob("*.a3m")) + list(output_folder.glob("*.json"))
     if existing_files:
-        print(f"[SKIP] MSA already exists for {input_fasta.name}. Skipping generation.")
+        if verbose:
+            print(f"[SKIP] MSA already exists for {input_fasta.name}. Skipping generation.")
         return output_folder
+    
+    check_and_start_gpuservers()
     
     headers = {"x-token": TOKEN}
     start_time = time.time()
